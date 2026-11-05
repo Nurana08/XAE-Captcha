@@ -1,17 +1,180 @@
-# Do your coding here
+# =====================================================================
+#  XAE-Captcha (Year 2050)
 
-# Segment 1
+#  Someone claims to be a registered person. The system runs a small
+#  TEST for each of five verification layers, turns each test result
+#  into a score (0-100), combines the scores into one trust score, and
+#  decides: APPROVED, EXTRA CHECK, or REJECTED.
 
-# Segment 2
+#  The code is split into 6 SEGMENTS:
+#    Segment 1: Setup - settings and registered identities
+#    Segment 2: Input helpers - asking questions safely
+#    Segment 3: The five verification tests
+#    Segment 4: Calculating the trust score
+#    Segment 5: Making the decision
+#    Segment 6: Main program and final report
 
-# Segment 3
+#  DEMO ACCOUNTS (answers for your presentation):
+#    username: aina   PIN: 482913   habits: morning / phone / riverton
+#                     vouchers: budi, cara, dewi
+#                     in-person registration: 2046, northgate
+#  
+#  Tip: for the biometric test, type the code after about 1-8 seconds.
+# =====================================================================
 
-# Segment 4
-#the reason why scores,points&digits flagged/warned because its name the same as inputs
-#but ig it's fine ,cuz it just serves as placeholders,doesn't interfere with the code
-#also need to wait for LAYERS[] , scores[] ,points and digit
-#before this  can work so ye
-#the functions:trust scores,average, points , combinations
+import random   # to create a fresh random code for the liveness test
+import time     # to measure how long a person takes to respond
+
+# Segment 1: Setup - settings and registred identities
+
+# Segment 2: Input helpers - asking questions safely
+
+# Segment 3: The five verification tests
+
+# Each tests asks questions, checks the answers and then returns a tuple:
+# (Score ranging from 0 - 100, short note explaning the result)
+
+def show_result(score, note):
+    # Print the result of one test.
+    print(f"  --> Score: {score}/100  ({note})")
+
+
+def credential_test(pin):
+    # TEST 1: Enter the PIN. Fewer attempts = higher score.
+    print("\n[TEST 1: CREDENTIAL] Enter your secret PIN.")
+    points_by_attempt = [100, 70, 40]           # a list: score for attempt 1, 2, 3
+    score = 0
+    note = f"PIN failed {max_pin_attempts} times."
+    for attempt in range(max_pin_attempts):
+        guess = input(f"  PIN (attempt {attempt + 1} of {max_pin_attempts}): ").strip()
+        if guess == pin:
+            score = points_by_attempt[attempt]
+            note = f"PIN correct on attempt {attempt + 1}."
+            break
+    show_result(score, note)
+    return score, note
+
+
+def biometric_test():
+    # TEST 2: Type a fresh code. Real people respond in a human time.
+    print("\n[TEST 2: BIOMETRIC] A live person must react to a fresh code.")
+    code = str(random.randint(0000, 9999))
+    input("  Press Enter when you are ready...")
+    start = time.time()                         # starts the stopwatch
+    print(f"  >>>  {code}  <<<")
+    answer = input("  Type the code you see: ").strip()
+    seconds = round(time.time() - start, 1)     # Calculates the time by (end time - start time)
+
+    if answer != code:
+        score, note = 0, "Wrong code."
+    elif seconds < 0.5:
+        score, note = 20, f"Answered in {seconds}s: too fast, realistically impossible, unless you are the fastest human on earth."
+    elif seconds <= 6:
+        score, note = 100, f"Correct in {seconds}s: a normal human response."
+    else:
+        score, note = 60, f"Correct but slow ({seconds}s): weaker proof of presence."
+    show_result(score, note)
+    return score, note
+
+
+def behavior_test(usual_time, usual_device, usual_city):
+    # TEST 3: Quiz about the person's usual habits.
+    print("\n[TEST 3: BEHAVIOR] Answer questions about your usual habits.")
+    questions = [
+        "When do you usually log in? (morning/afternoon/evening): ",
+        "Which device do you usually use? (phone/laptop/tablet): ",
+        "Which city do you usually log in from?: ",
+    ]
+    correct_answers = [usual_time, usual_device, usual_city]
+    correct = 0
+    for i in range(len(questions)):
+        answer = input("  " + questions[i]).strip().lower()
+        if answer == correct_answers[i]:
+            correct += 1
+    score = round(correct / len(questions) * 100)
+    note = f"{correct} of {len(questions)} habits matched."
+    show_result(score, note)
+    return score, note
+
+
+def vouching_test(username, contacts):
+    # TEST 4: Name up to 3 people who can vouch for you.
+    print("\n[TEST 4: VOUCHING] Name up to 3 verified people who can vouch for you.")
+    print("  (Press Enter on an empty line to stop early.)")
+    vouchers = []
+    while len(vouchers) < 3:
+        name = input(f"  Voucher {len(vouchers) + 1}: ").strip().lower()
+        if name == "":
+            break
+        elif name == username:
+            print("  You cannot vouch for yourself.")
+        elif name in vouchers:
+            print("  You already named that person.")
+        else:
+            vouchers.append(name)
+
+    confirmed = 0
+    for name in vouchers:
+        if name in contacts:                    # is the name in the registered list?
+            confirmed += 1
+            print(f"  {name.capitalize()} confirmed.")
+        else:
+            print(f"  {name.capitalize()} does not know this account.")
+    score = round(confirmed / 3 * 100)
+    note = f"{confirmed} of 3 vouchers confirmed."
+    show_result(score, note)
+    return score, note
+
+
+def anchor_test(anchor_year, anchor_office):
+    # TEST 5: Details of the one-time in-person registration.
+    print("\n[TEST 5: IN-PERSON ANCHOR] Recall your in-person registration.")
+    year_answer = ask_whole_number("  Which year did you register in person? ", 2000, YEAR)
+    office_answer = ask_text("  Which office did you visit? ").lower()
+
+    points = 0
+    difference = abs(year_answer - anchor_year)     # abs() ignores minus signs
+    if difference == 0:
+        points += 50
+        year_note = "year matched"
+    elif difference == 1:
+        points += 25
+        year_note = "year off by 1"
+    else:
+        year_note = "wrong year"
+
+    if office_answer == anchor_office:
+        points += 50
+        office_note = "office matched"
+    else:
+        office_note = "wrong office"
+
+    note = f"{year_note}, {office_note}."
+    show_result(points, note)
+    return points, note
+
+
+def run_all_tests(record):
+    # Run the five tests in order. Return two lists: scores and notes.
+    username, pin, usual_time, usual_device, usual_city, contacts, a_year, a_office = record
+
+    results = [credential_test(pin), biometric_test(), behavior_test(usual_time, usual_device, usual_city),
+               vouching_test(username, contacts), anchor_test(a_year, a_office)]
+    
+    scores = []
+    notes = []
+    for result in results:
+        scores.append(result[0])
+        notes.append(result[1])
+    return scores, notes
+
+# Segment 4: Calculating the trust score
+
+# the reason why scores,points&digits flagged/warned because its name the same as inputs
+# but ig it's fine ,cuz it just serves as placeholders,doesn't interfere with the code
+# also need to wait for LAYERS[], scores[], points and digit
+# before this can work so ye
+# the functions:trust scores, average, points, combinations
 
 def calculate_trust_score(scores):
     trust = 0
